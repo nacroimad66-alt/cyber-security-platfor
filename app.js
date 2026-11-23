@@ -1,0 +1,13 @@
+const $=id=>document.getElementById(id);
+async function api(url,body){const r=await fetch(url,{method:body?'POST':'GET',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});const d=await r.json();if(!r.ok)throw Error(d.error||'حدث خطأ');return d}
+async function refresh(){try{const d=await api('/api/status');$('status').textContent=d.visibility==='private'?'الموقع في الوضع الخاص':'الموقع في الوضع العام';if(d.user){$('auth').classList.add('hidden');$('account').classList.remove('hidden');$('who').textContent=d.user.username;$('role').textContent=d.user.role==='admin'?'مدير':'مستخدم';if(d.user.role==='admin'){$('admin').classList.remove('hidden');$('visibility').textContent=d.visibility;loadUsers();loadActivity()}}}catch(e){}}
+async function login(){try{await api('/api/login',{username:$('username').value,password:$('password').value});$('authmsg').textContent='تم تسجيل الدخول';refresh()}catch(e){$('authmsg').textContent=e.message}}
+async function register(){try{await api('/api/register',{username:$('username').value,password:$('password').value});$('authmsg').textContent='تم إنشاء الحساب';refresh()}catch(e){$('authmsg').textContent=e.message}}
+async function logout(){await api('/api/logout',{});location.reload()}
+function checkPassword(){let p=$('pwcheck').value,s=0;if(p.length>=12)s++;if(/[A-Z]/.test(p))s++;if(/[a-z]/.test(p))s++;if(/[0-9]/.test(p))s++;if(/[^A-Za-z0-9]/.test(p))s++;$('pwresult').textContent=['ضعيفة جداً','ضعيفة','متوسطة','جيدة','قوية','قوية جداً'][s]+' — '+s+'/5'}
+function checkUrl(){try{let u=new URL($('urlcheck').value);let notes=[];if(u.protocol!=='https:')notes.push('الرابط لا يستخدم HTTPS');if(u.username||u.password)notes.push('يحتوي بيانات اعتماد ضمن الرابط');if(u.hostname.includes('xn--'))notes.push('اسم النطاق يستخدم ترميزاً دولياً');$('urlresult').textContent=notes.length?notes.join('؛ '):'لم تظهر مؤشرات شكلية واضحة. هذا لا يثبت أمان الموقع.'}catch(e){$('urlresult').textContent='صيغة الرابط غير صحيحة'}}
+async function setVisibility(v){try{await api('/api/admin/visibility',{visibility:v});refresh()}catch(e){alert(e.message)}}
+async function loadUsers(){try{let a=await api('/api/admin/users');$('users').innerHTML=a.map(u=>`<p>${u.username} — ${u.role} <button class="secondary" onclick="changeRole(${u.id},'${u.role==='admin'?'user':'admin'}')">تبديل الصلاحية</button></p>`).join('')}catch(e){}}
+async function changeRole(id,role){try{await api('/api/admin/role',{id,role});loadUsers()}catch(e){alert(e.message)}}
+async function loadActivity(){try{let a=await api('/api/admin/activity');$('activity').innerHTML=a.map(x=>`<p>${x.created_at} — ${x.username}: ${x.action}</p>`).join('')}catch(e){}}
+refresh();
